@@ -2,6 +2,12 @@
 
 一个基于 Web 的 MRI 影像质量控制（QC）审阅工具。递归扫描文件夹中的 NIfTI 影像，自动生成三截面缩略图（轴位 / 矢状位 / 冠状位），并提供响应式网页界面，支持在**手机、平板、电脑**任意设备上进行人工 QC。
 
+## 🎬 演示
+
+https://github.com/mathhyphen/mri-qc/assets/demo/video/renders/demo.mp4
+
+> 完整演示视频：`demo/video/renders/demo.mp4`（48 秒，展示启动 → 网格审阅 → 交互式看片 → QC 标记 → 导出全流程）。视频源码见 `demo/video/`（HyperFrames 制作，可重新渲染）。
+
 ## ✨ 核心功能
 
 - **递归扫描** — 自动发现多层子文件夹中的所有 `.nii` / `.nii.gz` 文件
