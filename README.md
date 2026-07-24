@@ -15,12 +15,24 @@ Web-based MRI quality control review tool. Recursively scans a folder for NIfTI 
 
 ## Installation
 
+**Recommended — via [pipx](https://pipx.pypa.io/) (isolated environment, global `mri-qc` command):**
+
 ```bash
-pip install .
-# or for development:
-pip install -e .
-# with ngrok tunnel support:
-pip install -e ".[tunnel]"
+pipx install git+https://github.com/mathhyphen/mri-qc.git
+```
+
+**Or via pip:**
+
+```bash
+pip install git+https://github.com/mathhyphen/mri-qc.git
+```
+
+**For development:**
+
+```bash
+git clone https://github.com/mathhyphen/mri-qc.git
+cd mri-qc
+pip install -e ".[tunnel]"   # [tunnel] adds optional ngrok support
 ```
 
 ## Usage
