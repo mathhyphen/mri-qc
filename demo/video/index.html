@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Microsoft YaHei"; src: local("Microsoft YaHei"); }
+      @font-face { font-family: "PingFang SC"; src: local("PingFang SC"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0a0e1a; }
+      body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #e2e8f0; }
+      .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+      .scene { position: absolute; inset: 0; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; opacity: 0; }
+
+      /* ── Scene 1: Title ── */
+      #s1 .logo { font-size: 150px; font-weight: 800; letter-spacing: -3px;
+                  background: linear-gradient(120deg, #4f8ef7, #22c55e);
+                  -webkit-background-clip: text; background-clip: text; color: transparent; }
+      #s1 .tagline { font-size: 40px; color: #64748b; margin-top: 24px; }
+      #s1 .brain { font-size: 120px; margin-bottom: 30px; }
+
+      /* ── Scene 2: Terminal ── */
+      #s2 .term { width: 1100px; background: #0d1220; border: 1px solid #243050;
+                  border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+      #s2 .tbar { display: flex; gap: 8px; padding: 16px 20px; background: #131b2e; border-bottom: 1px solid #243050; }
+      #s2 .dot { width: 14px; height: 14px; border-radius: 50%; }
+      #s2 .tbody { padding: 36px 40px; font-size: 34px; line-height: 1.7; }
+      #s2 .prompt { color: #22c55e; }
+      #s2 .cmd { color: #e2e8f0; display: inline-block; overflow: hidden; white-space: nowrap;
+                 vertical-align: bottom; width: 0; }
+      #s2 .cursor { display: inline-block; width: 14px; height: 38px; background: #4f8ef7;
+                    vertical-align: middle; margin-left: 4px; }
+      #s2 .out { color: #64748b; font-size: 28px; margin-top: 14px; opacity: 0; }
+      #s2 .out .url { color: #4f8ef7; }
+
+      /* ── Scene 3: Grid ── */
+      #s3 .hdr { width: 1600px; display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+      #s3 .hlogo { font-size: 34px; font-weight: 700; color: #4f8ef7; }
+      #s3 .chip { padding: 6px 20px; border-radius: 24px; font-size: 24px; font-weight: 600;
+                  background: #1e293b; border: 1px solid #243050; }
+      #s3 .chip.g { background: #052e16; border-color: #166534; color: #4ade80; }
+      #s3 .grid { display: grid; grid-template-columns: repeat(3, 480px); gap: 28px; }
+      .card { background: #131b2e; border: 2px solid #243050; border-radius: 16px; overflow: hidden; }
+      .card img { width: 100%; display: block; background: #000; }
+      .card .meta { padding: 16px 20px; }
+      .card .fname { font-size: 24px; font-weight: 700; }
+      .card .fmeta { font-size: 18px; color: #8b98ad; margin-top: 4px; }
+      .card .qbtns { display: flex; gap: 10px; padding: 0 20px 18px; }
+      .qb { flex: 1; padding: 10px 0; text-align: center; border-radius: 10px; font-size: 20px;
+            font-weight: 700; border: 2px solid; background: transparent; }
+      .qb.p { border-color: #22c55e; color: #22c55e; }
+      .qb.r { border-color: #f59e0b; color: #f59e0b; }
+      .qb.x { border-color: #ef4444; color: #ef4444; }
+
+      /* ── Scene 4/5/6: Viewer ── */
+      #viewer .vhdr { width: 1600px; display: flex; align-items: center; margin-bottom: 24px; }
+      #viewer .vtitle { font-size: 30px; font-weight: 700; flex: 1; }
+      #viewer .vmain { position: relative; width: 760px; height: 760px; background: #000;
+                       border: 1px solid #243050; border-radius: 12px; overflow: hidden; }
+      #viewer .vmain img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+      #viewer .vthumbs { display: flex; gap: 20px; margin-top: 26px; }
+      #viewer .vthumbs img { width: 150px; height: 150px; object-fit: cover; border: 3px solid #243050;
+                             border-radius: 8px; background: #000; }
+      #viewer .vthumbs img.active { border-color: #4f8ef7; }
+      #viewer .slider { width: 760px; margin-top: 26px; display: flex; align-items: center; gap: 18px; }
+      #viewer .track { width: 560px; height: 10px; background: #1e293b; border-radius: 6px; position: relative; }
+      #viewer .knob { position: absolute; top: 50%; left: 0; width: 30px; height: 30px;
+                      margin: -15px 0 0 -15px; background: #4f8ef7; border-radius: 50%; }
+      #viewer .sval { font-size: 24px; color: #4f8ef7; min-width: 150px; }
+      #viewer .vqc { display: flex; gap: 16px; margin-top: 28px; }
+      #viewer .vqc .qb { padding: 14px 44px; font-size: 26px; }
+      .badge { position: absolute; top: 18px; right: 18px; width: 64px; height: 64px; border-radius: 50%;
+               background: #22c55e; color: #000; font-size: 38px; font-weight: 800;
+               display: flex; align-items: center; justify-content: center; opacity: 0; }
+      .clickring { position: absolute; width: 80px; height: 80px; border: 5px solid #fff; border-radius: 50%;
+                   opacity: 0; margin: -40px 0 0 -40px; }
+
+      /* ── Scene 7: Export ── */
+      #s7 .csv { width: 1000px; background: #0d1220; border: 1px solid #243050; border-radius: 16px;
+                 padding: 40px 48px; font-size: 26px; line-height: 1.9; }
+      #s7 .csv .h { color: #4f8ef7; font-weight: 700; }
+      #s7 .csv .pass { color: #4ade80; }
+      #s7 .csv .exc { color: #f87171; }
+      #s7 .dlbtn { margin-top: 34px; padding: 18px 60px; background: #4f8ef7; color: #fff;
+                   border-radius: 12px; font-size: 30px; font-weight: 700; }
+
+      /* ── Scene 8: Outro ── */
+      #s8 .repo { font-size: 64px; font-weight: 800; color: #e2e8f0; }
+      #s8 .repo .accent { color: #4f8ef7; }
+      #s8 .sub { font-size: 32px; color: #64748b; margin-top: 22px; }
+      #s8 .stars { font-size: 30px; color: #f59e0b; margin-top: 30px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="48"
+         data-width="1920" data-height="1080">
+
+      <!-- Scene 1: Title -->
+      <div id="s1" class="scene clip" data-start="0" data-duration="4" data-track-index="1">
+        <div class="brain">🧠</div>
+        <div class="logo">mri-qc</div>
+        <div class="tagline">Web 端 MRI 影像质量控制审阅工具</div>
+      </div>
+
+      <!-- Scene 2: Terminal -->
+      <div id="s2" class="scene clip" data-start="3.5" data-duration="6" data-track-index="2">
+        <div class="term">
+          <div class="tbar">
+            <span class="dot" style="background:#ef4444"></span>
+            <span class="dot" style="background:#f59e0b"></span>
+            <span class="dot" style="background:#22c55e"></span>
+          </div>
+          <div class="tbody mono">
+            <div><span class="prompt">➜&nbsp;&nbsp;</span><span class="cmd" id="typecmd">mri-qc&nbsp;./demo_data</span><span class="cursor"></span></div>
+            <div class="out" id="termout">
+              🌐 Local&nbsp;&nbsp;: <span class="url">http://127.0.0.1:5000</span><br>
+              📱 LAN&nbsp;&nbsp;&nbsp;&nbsp;: <span class="url">http://192.168.1.100:5000</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 3: Grid -->
+      <div id="s3" class="scene clip" data-start="9" data-duration="8.5" data-track-index="3">
+        <div class="hdr">
+          <span class="hlogo">🧠 MRI QC</span>
+          <span class="chip">共 5</span>
+          <span class="chip g">✓ 2</span>
+          <span class="chip">未审 3</span>
+        </div>
+        <div class="grid">
+          <div class="card gcard"><img src="assets/sub-01_thumb.webp"><div class="meta"><div class="fname">sub-01 / T1w.nii.gz</div><div class="fmeta">anat · 14.4 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+          <div class="card gcard"><img src="assets/sub-02_thumb.webp"><div class="meta"><div class="fname">sub-02 / T1w.nii.gz</div><div class="fmeta">anat · 13.9 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+          <div class="card gcard"><img src="assets/sub-03_thumb.webp"><div class="meta"><div class="fname">sub-03 / T1w.nii.gz</div><div class="fmeta">anat · 15.1 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+          <div class="card gcard"><img src="assets/sub-04_thumb.webp"><div class="meta"><div class="fname">sub-04 / T1w.nii.gz</div><div class="fmeta">anat · 12.8 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+          <div class="card gcard"><img src="assets/sub-05_thumb.webp"><div class="meta"><div class="fname">sub-05 / T1w.nii.gz</div><div class="fmeta">anat · 14.0 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+          <div class="card gcard"><img src="assets/sub-01_thumb.webp"><div class="meta"><div class="fname">sub-06 / T1w.nii.gz</div><div class="fmeta">anat · 13.3 MB</div></div><div class="qbtns"><span class="qb p">✓ 通过</span><span class="qb r">⚑ 复核</span><span class="qb x">✗ 排除</span></div></div>
+        </div>
+      </div>
+
+      <!-- Scene 4/5/6: Viewer (open, slider, QC mark) -->
+      <div id="viewer" class="scene clip" data-start="17" data-duration="21.5" data-track-index="4">
+        <div class="vhdr"><span class="vtitle">sub-01 / anat / T1w.nii.gz</span></div>
+        <div class="vmain">
+          <img id="sl35" src="assets/sub-01_axial_35.png" style="opacity:1">
+          <img id="sl45" src="assets/sub-01_axial_45.png" style="opacity:0">
+          <img id="sl55" src="assets/sub-01_axial_55.png" style="opacity:0">
+          <img id="sl65" src="assets/sub-01_axial_65.png" style="opacity:0">
+          <div class="badge" id="passbadge">✓</div>
+        </div>
+        <div class="vthumbs">
+          <img class="active" src="assets/sub-01_axial_55.png">
+          <img src="assets/sub-01_thumb.webp">
+          <img src="assets/sub-01_thumb.webp">
+        </div>
+        <div class="slider">
+          <div class="track"><div class="knob" id="knob"></div></div>
+          <span class="sval" id="sval">z = 86 / 247</span>
+        </div>
+        <div class="vqc">
+          <span class="qb p" id="btnpass">✓ 通过</span>
+          <span class="qb r">⚑ 复核</span>
+          <span class="qb x">✗ 排除</span>
+        </div>
+        <div class="clickring" id="ring1"></div>
+      </div>
+
+      <!-- Scene 7: Export CSV -->
+      <div id="s7" class="scene clip" data-start="38" data-duration="5" data-track-index="5">
+        <div class="csv mono">
+          <div class="h">file,folder,qc_status,timestamp</div>
+          <div>T1w.nii.gz,sub-01/anat,<span class="pass">pass</span>,2026-07-24</div>
+          <div>T1w.nii.gz,sub-02/anat,<span class="pass">pass</span>,2026-07-24</div>
+          <div>T1w.nii.gz,sub-03/anat,<span class="exc">exclude</span>,2026-07-24</div>
+          <div>T1w.nii.gz,sub-04/anat,unreviewed,</div>
+        </div>
+        <div class="dlbtn">⬇ 导出 qc_results.csv</div>
+      </div>
+
+      <!-- Scene 8: Outro -->
+      <div id="s8" class="scene clip" data-start="42.5" data-duration="5.5" data-track-index="6">
+        <div class="repo">github.com/<span class="accent">mathhyphen</span>/<span class="accent">mri-qc</span></div>
+        <div class="sub">pipx install git+https://github.com/mathhyphen/mri-qc.git</div>
+        <div class="stars">⭐ 开源 · 免费 · 手机 / 平板 / 电脑通用</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const mtl = gsap.timeline({ paused: true });
+
+      // Scene 1: Title (0 - 3.5)
+      mtl.to("#s1", { opacity: 1, duration: 0.01 }, 0);
+      mtl.from("#s1 .brain", { scale: 0, rotation: -30, duration: 0.7, ease: "back.out(1.7)" }, 0.1);
+      mtl.from("#s1 .logo", { y: 60, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.4);
+      mtl.from("#s1 .tagline", { y: 30, opacity: 0, duration: 0.6 }, 0.8);
+      mtl.to("#s1", { opacity: 0, duration: 0.4 }, 3.3);
+
+      // Scene 2: Terminal (3.5 - 9)
+      mtl.to("#s2", { opacity: 1, duration: 0.4 }, 3.6);
+      mtl.from("#s2 .term", { y: 50, scale: 0.95, duration: 0.6, ease: "power3.out" }, 3.7);
+      mtl.to("#typecmd", { width: "340px", duration: 1.6, ease: "steps(18)" }, 4.4);
+      mtl.to("#termout", { opacity: 1, duration: 0.5 }, 6.4);
+      mtl.to("#s2", { opacity: 0, duration: 0.4 }, 8.5);
+
+      // Scene 3: Grid (9 - 17)
+      mtl.to("#s3", { opacity: 1, duration: 0.4 }, 9.1);
+      mtl.from("#s3 .hdr", { y: -40, opacity: 0, duration: 0.5 }, 9.2);
+      mtl.from(".gcard", { y: 80, opacity: 0, duration: 0.6, stagger: 0.12, ease: "power3.out" }, 9.6);
+      mtl.to(".gcard", { scale: 1.06, borderColor: "#4f8ef7", duration: 0.4,
+                        filter: "drop-shadow(0 0 24px rgba(79,142,247,.5))" }, 15.4);
+      mtl.to("#s3", { opacity: 0, duration: 0.4 }, 16.5);
+
+      // Scene 4: Viewer opens (17 - 24)
+      mtl.to("#viewer", { opacity: 1, duration: 0.4 }, 17.1);
+      mtl.from("#viewer .vmain", { scale: 0.6, opacity: 0, duration: 0.7, ease: "back.out(1.4)" }, 17.2);
+      mtl.from("#viewer .vthumbs img", { y: 40, opacity: 0, stagger: 0.1, duration: 0.5 }, 17.8);
+      mtl.from("#viewer .slider", { opacity: 0, y: 30, duration: 0.5 }, 18.2);
+      mtl.from("#viewer .vqc .qb", { y: 30, opacity: 0, stagger: 0.08, duration: 0.4 }, 18.5);
+      mtl.set("#knob", { x: 196 }, 17.2);
+
+      // Scene 5: Slider sweeps slices (24 - 32), knob moves via x transform
+      mtl.to("#knob", { x: 252, duration: 2.2, ease: "power1.inOut" }, 24.0);
+      mtl.to("#sl35", { opacity: 0, duration: 0.4 }, 24.6);
+      mtl.to("#sl45", { opacity: 1, duration: 0.4 }, 24.6);
+      mtl.set("#sval", { innerText: "z = 111 / 247" }, 24.6);
+      mtl.to("#knob", { x: 308, duration: 2.4, ease: "power1.inOut" }, 26.6);
+      mtl.to("#sl45", { opacity: 0, duration: 0.4 }, 27.2);
+      mtl.to("#sl55", { opacity: 1, duration: 0.4 }, 27.2);
+      mtl.set("#sval", { innerText: "z = 136 / 247" }, 27.2);
+      mtl.to("#knob", { x: 364, duration: 2.4, ease: "power1.inOut" }, 29.4);
+      mtl.to("#sl55", { opacity: 0, duration: 0.4 }, 30.0);
+      mtl.to("#sl65", { opacity: 1, duration: 0.4 }, 30.0);
+      mtl.set("#sval", { innerText: "z = 161 / 247" }, 30.0);
+
+      // Scene 6: QC mark (32 - 38): ripple on pass button, badge pops
+      mtl.set("#ring1", { left: 784, top: 985 }, 32.0);
+      mtl.fromTo("#ring1", { scale: 0.3, opacity: 0.9 }, { scale: 1.8, opacity: 0, duration: 0.6, ease: "power2.out" }, 33.4);
+      mtl.to("#btnpass", { scale: 1.15, background: "#22c55e", color: "#000", duration: 0.25 }, 33.6);
+      mtl.to("#btnpass", { scale: 1.0, duration: 0.3 }, 33.9);
+      mtl.from("#passbadge", { scale: 0, duration: 0.01 }, 33.9);
+      mtl.to("#passbadge", { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 34.0);
+      mtl.to("#viewer", { opacity: 0, duration: 0.4 }, 37.4);
+
+      // Scene 7: Export (38 - 42)
+      mtl.to("#s7", { opacity: 1, duration: 0.4 }, 38.1);
+      mtl.from("#s7 .csv", { y: 50, opacity: 0, duration: 0.6, ease: "power3.out" }, 38.2);
+      mtl.from("#s7 .csv div", { x: -30, opacity: 0, stagger: 0.15, duration: 0.4 }, 38.6);
+      mtl.from("#s7 .dlbtn", { scale: 0.8, opacity: 0, duration: 0.4, ease: "back.out(1.7)" }, 40.2);
+      mtl.to("#s7", { opacity: 0, duration: 0.4 }, 42.0);
+
+      // Scene 8: Outro (42.5 - 48)
+      mtl.to("#s8", { opacity: 1, duration: 0.4 }, 42.6);
+      mtl.from("#s8 .repo", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 42.8);
+      mtl.from("#s8 .sub", { y: 25, opacity: 0, duration: 0.5 }, 43.4);
+      mtl.from("#s8 .stars", { y: 20, opacity: 0, duration: 0.5 }, 43.9);
+
+      window.__timelines["main"] = mtl;
+    </script>
+  </body>
+</html>

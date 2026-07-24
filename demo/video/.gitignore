@@ -1,0 +1,8 @@
+# HyperFrames 本地环境（不提交）
+node_modules/
+demo/
+package-lock.json
+
+# 渲染中间产物（只保留最终 MP4）
+renders/*.png
+renders/*.webp

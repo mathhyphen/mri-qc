@@ -8,6 +8,9 @@ build/
 .qc_cache*/
 *.png
 *.webp
+# 演示素材例外（需要提交）
+!demo/assets/*.png
+!demo/assets/*.webp
 .venv/
 venv/
 .env
