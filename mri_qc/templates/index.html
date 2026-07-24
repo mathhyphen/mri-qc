@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>MRI QC Review</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0e1a;--card:#131b2e;--border:#243050;--accent:#4f8ef7;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--text:#e2e8f0;--muted:#64748b;--card-min:300px;--img-h:auto}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px}
+button{cursor:pointer;font-family:inherit}
+
+/* ── header ── */
+#hdr{position:sticky;top:0;z-index:100;background:rgba(10,14,26,.97);border-bottom:1px solid var(--border);padding:10px 16px 8px;backdrop-filter:blur(8px)}
+.hrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{font-size:17px;font-weight:700;color:var(--accent);white-space:nowrap}
+#stats{display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-height:4.8em;overflow:hidden;line-height:1.6}
+.chip{padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600;background:#1e293b;border:1px solid var(--border);white-space:nowrap}
+.chip.g{background:#052e16;border-color:#166534;color:#4ade80}
+.chip.a{background:#451a03;border-color:#92400e;color:#fbbf24}
+.chip.r{background:#450a0a;border-color:#991b1b;color:#f87171}
+#pbar{height:3px;background:#1e293b;border-radius:2px;margin-top:7px;overflow:hidden}
+#pfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .5s;border-radius:2px}
+
+/* ── toolbar ── */
+#tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;background:#0d1220;border-bottom:1px solid var(--border)}
+#q{flex:1;min-width:130px;background:#1a2338;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;font-size:14px;outline:none}
+#q:focus{border-color:var(--accent)}
+#q::placeholder{color:var(--muted)}
+select{background:#1a2338;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 10px;font-size:13px;outline:none;max-width:220px}
+.btn{background:#1a2338;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 13px;font-size:13px;transition:background .15s;white-space:nowrap}
+.btn:hover{background:#243050}
+.btn.acc{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.acc:hover{background:#3b7ae8}
+.ctl{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ctl input[type=range]{width:72px;accent-color:var(--accent);cursor:pointer}
+
+/* ── grid ── */
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr));gap:12px;padding:14px 16px}
+@media(max-width:680px){#grid{grid-template-columns:1fr}}
+
+/* ── card ── */
+.card{background:var(--card);border:2px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.card.pass{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+.card.review{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.card.exclude{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.card.sel{outline:3px solid var(--accent);outline-offset:1px}
+.thumb-wrap{position:relative;background:#000;min-height:80px;display:flex;align-items:center;justify-content:center;cursor:zoom-in}
+.thumb-wrap img{width:100%;display:block;max-height:var(--img-h);object-fit:contain}
+.ph{color:var(--muted);font-size:13px;padding:36px 10px;text-align:center}
+.spin{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tbadge{position:absolute;top:6px;right:6px;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+.tbadge.pass{background:var(--green);color:#000}
+.tbadge.review{background:var(--amber);color:#000}
+.tbadge.exclude{background:var(--red);color:#fff}
+.cinfo{padding:9px 12px 4px}
+.fname{font-size:13px;font-weight:700;word-break:break-all;line-height:1.3}
+.fmeta{font-size:11px;color:var(--muted);margin-top:3px;word-break:break-all}
+.qbtns{display:flex;gap:6px;padding:8px 12px 11px;flex-wrap:wrap}
+.qb{flex:1;min-width:58px;padding:6px 4px;border-radius:7px;border:1.5px solid;font-size:12px;font-weight:700;background:transparent;transition:all .12s}
+.qb.p{border-color:var(--green);color:var(--green)}
+.qb.p:hover,.qb.p.on{background:var(--green);color:#000}
+.qb.r{border-color:var(--amber);color:var(--amber)}
+.qb.r:hover,.qb.r.on{background:var(--amber);color:#000}
+.qb.x{border-color:var(--red);color:var(--red)}
+.qb.x:hover,.qb.x.on{background:var(--red);color:#fff}
+.qb.c{border-color:var(--muted);color:var(--muted);flex:0;min-width:36px}
+.qb.c:hover{background:#334155;color:var(--text)}
+
+/* ── pager ── */
+#pgr{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;flex-wrap:wrap}
+#pinfo{color:var(--muted);font-size:13px}
+
+/* ── empty ── */
+#empty{display:none;text-align:center;padding:80px 20px;color:var(--muted)}
+#empty .big{font-size:48px;margin-bottom:12px}
+
+/* ── shortcuts hint ── */
+#hints{position:fixed;bottom:12px;right:14px;background:rgba(19,27,46,.92);border:1px solid var(--border);border-radius:10px;padding:8px 13px;font-size:11px;color:var(--muted);line-height:1.9;z-index:50;pointer-events:none}
+#hints b{color:var(--text)}
+@media(max-width:800px){#hints{display:none}}
+
+/* ── lightbox ── */
+#lb{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.93);align-items:center;justify-content:center;flex-direction:column;gap:10px}
+#lb.open{display:flex}
+#lb img{max-width:97vw;max-height:86vh;object-fit:contain;border-radius:6px}
+#lbcap{color:var(--muted);font-size:13px}
+
+/* ── toast ── */
+#toasts{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+.toast{background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:8px 18px;font-size:13px;animation:tin .2s ease;white-space:nowrap}
+.toast.ok{border-color:var(--green);color:#4ade80}
+.toast.err{border-color:var(--red);color:#f87171}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── offline banner ── */
+#offline{display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:var(--red);color:#fff;text-align:center;padding:6px;font-size:13px;font-weight:600}
+
+/* ── volume viewer ── */
+#viewer{display:none;position:fixed;inset:0;z-index:200;background:rgba(5,8,18,.98);flex-direction:column}
+#viewer.open{display:flex}
+.vw-hdr{display:flex;align-items:center;gap:12px;padding:8px 16px;flex-wrap:wrap;flex-shrink:0}
+.vw-title{font-size:13px;font-weight:700;word-break:break-all;flex:1}
+.vw-close{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:5px 12px;font-size:13px;cursor:pointer}
+.vw-close:hover{background:#243050}
+.vw-body{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:4px 16px}
+#vwMain{display:flex;flex-direction:column;align-items:center;gap:8px;max-height:100%}
+#cMain{border:1px solid var(--border);border-radius:8px;cursor:crosshair;background:#000;display:block}
+.vw-thumbs{display:flex;gap:10px;align-items:center}
+.vw-thumbs canvas{border:2px solid var(--border);border-radius:4px;cursor:pointer}
+.vw-ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.vw-ctrl input[type=range]{width:240px;accent-color:var(--accent)}
+.vw-ctrl .sl-val{font-size:12px;color:var(--accent);min-width:90px}
+.vw-load{color:var(--muted);font-size:14px;padding:60px;text-align:center}
+.vw-qc{display:flex;gap:8px;padding:8px 16px;justify-content:center;flex-wrap:wrap;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="offline">⚠ 服务器连接断开，正在重连…</div>
+
+<header id="hdr">
+  <div class="hrow">
+    <span class="logo">🧠 MRI QC</span>
+    <div id="stats"></div>
+  </div>
+  <div id="pbar"><div id="pfill"></div></div>
+</header>
+
+<div id="tb">
+  <input id="q" type="search" placeholder="搜索文件名 / 路径…" autocomplete="off">
+  <select id="fs">
+    <option value="all">全部状态</option>
+    <option value="unreviewed">未审核</option>
+    <option value="pass">✓ 通过</option>
+    <option value="review">⚑ 复核</option>
+    <option value="exclude">✗ 排除</option>
+    <option value="error">⚠ 缩略图错误</option>
+  </select>
+  <select id="ff"><option value="all">全部文件夹</option></select>
+  <select id="pp">
+    <option value="10">10/页</option>
+    <option value="20">20/页</option>
+    <option value="50" selected>50/页</option>
+    <option value="100">100/页</option>
+    <option value="200">200/页</option>
+    <option value="500">500/页</option>
+  </select>
+  <label class="ctl" title="卡片最小宽度（越小每行越多）">宽<input id="cw" type="range" min="160" max="600" step="20" value="300"></label>
+  <label class="ctl" title="图片最大高度（0=不限）">高<input id="ih" type="range" min="0" max="500" step="20" value="0"></label>
+  <button class="btn acc" id="btnNext">⏭ 跳到未审核</button>
+  <button class="btn" id="btnExport">⬇ 导出 CSV</button>
+</div>
+
+<main id="grid"></main>
+<div id="empty"><div class="big">📂</div><div>没有找到匹配的图像文件</div></div>
+
+<div id="pgr">
+  <button class="btn" id="bp">‹ 上一页</button>
+  <span id="pinfo"></span>
+  <button class="btn" id="bn">下一页 ›</button>
+</div>
+
+<div id="hints">
+  <b>←→</b> 选择 &nbsp;<b>1</b> 通过 &nbsp;<b>2</b> 复核 &nbsp;<b>3</b> 排除 &nbsp;<b>0</b> 清除<br>
+  <b>N</b> 下一个未审核 &nbsp;<b>PgUp/PgDn</b> 翻页 &nbsp;<b>Esc</b> 关闭大图
+</div>
+
+<div id="lb" onclick="closeLB(event)">
+  <img id="lbimg" src="" alt="">
+  <div id="lbcap"></div>
+</div>
+
+<!-- Volume Viewer -->
+<div id="viewer">
+  <div class="vw-hdr">
+    <span class="vw-title" id="vwTitle"></span>
+    <button class="vw-close" onclick="closeViewer()">✕ 关闭</button>
+  </div>
+  <div class="vw-body" id="vwBody">
+    <div class="vw-load" id="vwLoad">加载 3D 数据中…</div>
+    <div id="vwMain" style="display:none">
+      <canvas id="cMain"></canvas>
+      <div class="vw-thumbs">
+        <canvas id="tAx" width="90" height="90" title="Axial"></canvas>
+        <canvas id="tSg" width="90" height="90" title="Sagittal"></canvas>
+        <canvas id="tCo" width="90" height="90" title="Coronal"></canvas>
+      </div>
+      <div class="vw-ctrl">
+        <input type="range" id="sMain" min="0" max="100" value="50">
+        <span class="sl-val" id="vMain"></span>
+      </div>
+    </div>
+  </div>
+  <div class="vw-qc" id="vwQc"></div>
+</div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+const CFG = "__QC_CONFIG__";
+const $ = s => document.querySelector(s);
+let files = [], filtered = [], page = 0, perPage = 50, selIdx = -1;
+let searchT = null, refreshT = null;
+const LSK = 'mri_qc_layout_v2';
+let layout = Object.assign({cw:300, ih:0}, JSON.parse(localStorage.getItem(LSK)||'{}'));
+
+/* ── utils ── */
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type || '');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── data ── */
+async function loadFiles() {
+  try {
+    const r = await fetch('/api/files');
+    files = await r.json();
+    buildFolderFilter();
+    applyFilter();
+    $('#offline').style.display = 'none';
+  } catch(e) {
+    $('#offline').style.display = 'block';
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    const done = s.pass + s.review + s.exclude;
+    const pct = s.total ? Math.round(done / s.total * 100) : 0;
+    $('#stats').innerHTML =
+      `<span class="chip">共 ${s.total}</span>` +
+      `<span class="chip g">✓ ${s.pass}</span>` +
+      `<span class="chip a">⚑ ${s.review}</span>` +
+      `<span class="chip r">✗ ${s.exclude}</span>` +
+      `<span class="chip">未审 ${s.unreviewed}</span>` +
+      `<span class="chip">缩略图 ${s.thumb_done}/${s.thumb_total}</span>`;
+    $('#pfill').style.width = pct + '%';
+    $('#offline').style.display = 'none';
+  } catch(e) {
+    $('#offline').style.display = 'block';
+  }
+}
+
+function buildFolderFilter() {
+  const folders = [...new Set(files.map(f => f.folder))].sort();
+  const ff = $('#ff');
+  const cur = ff.value;
+  ff.innerHTML = '<option value="all">全部文件夹</option>' +
+    folders.map(d => `<option value="${esc(d)}">${esc(d === '.' ? '(根目录)' : d)}</option>`).join('');
+  ff.value = cur;
+}
+
+/* ── filter & render ── */
+function applyFilter() {
+  const q = $('#q').value.trim().toLowerCase();
+  const st = $('#fs').value;
+  const fo = $('#ff').value;
+  filtered = files.filter(f => {
+    if (q && !(f.name.toLowerCase().includes(q) || f.id.toLowerCase().includes(q))) return false;
+    if (fo !== 'all' && f.folder !== fo) return false;
+    if (st === 'unreviewed' && f.qc) return false;
+    if (st === 'pass' && f.qc !== 'pass') return false;
+    if (st === 'review' && f.qc !== 'review') return false;
+    if (st === 'exclude' && f.qc !== 'exclude') return false;
+    if (st === 'error' && f.thumb_status !== 'error') return false;
+    return true;
+  });
+  page = 0;
+  render();
+}
+
+function render() {
+  perPage = +$('#pp').value;
+  const total = Math.ceil(filtered.length / perPage) || 1;
+  page = Math.min(Math.max(0, page), total - 1);
+  const slice = filtered.slice(page * perPage, (page + 1) * perPage);
+  const grid = $('#grid');
+
+  $('#empty').style.display = filtered.length === 0 ? 'block' : 'none';
+  $('#pinfo').textContent = `第 ${page + 1} / ${total} 页 · 共 ${filtered.length} 个文件`;
+
+  grid.innerHTML = slice.map((f, i) => {
+    const qc = f.qc || '';
+    let thumbHtml;
+    if (f.thumb_status === 'error') {
+      thumbHtml = `<div class="ph">⚠ 缩略图生成失败<br><small>${esc(f.name)}</small></div>`;
+    } else if (f.thumb_status === 'done') {
+      thumbHtml = `<img src="${f.thumb}" alt="${esc(f.name)}" loading="lazy" onclick="openViewer('${esc(f.id)}')" onerror="this.parentElement.innerHTML='<div class=ph>加载失败</div>'">`;
+    } else {
+      thumbHtml = `<div class="ph"><div class="spin" style="margin:0 auto 8px"></div>生成中…</div>`;
+    }
+    const badge = qc ? `<span class="tbadge ${qc}">${qc === 'pass' ? '✓' : qc === 'review' ? '⚑' : '✗'}</span>` : '';
+    return `<div class="card ${qc}" id="card-${i}" data-fid="${esc(f.id)}" data-idx="${i}">
+      <div class="thumb-wrap">${thumbHtml}${badge}</div>
+      <div class="cinfo">
+        <div class="fname">${esc(f.name)}</div>
+        <div class="fmeta">${esc(f.folder === '.' ? '' : f.folder + '/')} · ${f.size_mb} MB</div>
+      </div>
+      <div class="qbtns">
+        <button class="qb p ${qc==='pass'?'on':''}" onclick="setQC('${esc(f.id)}','pass',this)">✓ 通过</button>
+        <button class="qb r ${qc==='review'?'on':''}" onclick="setQC('${esc(f.id)}','review',this)">⚑ 复核</button>
+        <button class="qb x ${qc==='exclude'?'on':''}" onclick="setQC('${esc(f.id)}','exclude',this)">✗ 排除</button>
+        <button class="qb c" title="清除标记" onclick="setQC('${esc(f.id)}','',this)">↺</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── QC actions ── */
+async function setQC(fid, status, btn) {
+  try {
+    const r = await fetch('/api/qc/' + encodeURIComponent(fid).replace(/%2F/g, '/'), {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status})
+    });
+    if (!r.ok) throw new Error();
+    const f = files.find(x => x.id === fid);
+    if (f) f.qc = status;
+    const labels = {pass: '✓ 通过', review: '⚑ 复核', exclude: '✗ 排除', '': '↺ 已清除'};
+    toast(labels[status] + ' · ' + fid.split('/').pop(), status === 'exclude' ? 'err' : 'ok');
+    // Update card in place without full re-render
+    const card = document.querySelector(`[data-fid="${CSS.escape(fid)}"]`);
+    if (card) {
+      card.className = 'card ' + status + (card.classList.contains('sel') ? ' sel' : '');
+      const badge = card.querySelector('.tbadge');
+      if (badge) badge.remove();
+      if (status) {
+        const b = document.createElement('span');
+        b.className = 'tbadge ' + status;
+        b.textContent = status === 'pass' ? '✓' : status === 'review' ? '⚑' : '✗';
+        card.querySelector('.thumb-wrap').appendChild(b);
+      }
+      card.querySelectorAll('.qb').forEach(b2 => b2.classList.remove('on'));
+      if (btn && status) btn.classList.add('on');
+    }
+    loadStats();
+  } catch(e) {
+    toast('保存失败，请重试', 'err');
+  }
+}
+
+function jumpNext() {
+  const idx = filtered.findIndex(f => !f.qc);
+  if (idx < 0) { toast('🎉 全部审核完成！', 'ok'); return; }
+  page = Math.floor(idx / perPage);
+  render();
+  setTimeout(() => {
+    const card = document.getElementById('card-' + (idx % perPage));
+    if (card) { card.scrollIntoView({behavior:'smooth', block:'center'}); selectCard(idx % perPage); }
+  }, 80);
+}
+
+/* ── selection & keyboard ── */
+function selectCard(i) {
+  document.querySelectorAll('.card.sel').forEach(c => c.classList.remove('sel'));
+  selIdx = i;
+  const card = document.getElementById('card-' + i);
+  if (card) card.classList.add('sel');
+}
+
+function curFid() {
+  if (selIdx < 0) return null;
+  const card = document.getElementById('card-' + selIdx);
+  return card ? card.dataset.fid : null;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,select,textarea')) return;
+  const fid = curFid();
+  const cards = document.querySelectorAll('.card');
+  const n = cards.length;
+  switch(e.key) {
+    case 'ArrowRight': case 'ArrowDown':
+      e.preventDefault(); selectCard(Math.min(selIdx + 1, n - 1)); break;
+    case 'ArrowLeft': case 'ArrowUp':
+      e.preventDefault(); selectCard(Math.max(selIdx - 1, 0)); break;
+    case '1': if (fid) setQC(fid, 'pass'); break;
+    case '2': if (fid) setQC(fid, 'review'); break;
+    case '3': if (fid) setQC(fid, 'exclude'); break;
+    case '0': if (fid) setQC(fid, ''); break;
+    case 'n': case 'N': jumpNext(); break;
+    case 'PageDown': e.preventDefault(); page++; render(); break;
+    case 'PageUp': e.preventDefault(); page--; render(); break;
+    case 'Escape': $('#lb').classList.remove('open'); break;
+  }
+});
+
+/* ── lightbox ── */
+function openLB(src, name) {
+  $('#lbimg').src = src;
+  $('#lbcap').textContent = name;
+  $('#lb').classList.add('open');
+}
+function closeLB(e) {
+  if (e.target === $('#lb') || e.target === $('#lbimg')) $('#lb').classList.remove('open');
+}
+
+/* ── layout ── */
+function applyLayout() {
+  layout.cw = +$('#cw').value;
+  layout.ih = +$('#ih').value;
+  document.documentElement.style.setProperty('--card-min', layout.cw + 'px');
+  document.documentElement.style.setProperty('--img-h', layout.ih ? layout.ih + 'px' : 'auto');
+  localStorage.setItem(LSK, JSON.stringify(layout));
+}
+
+/* ── events ── */
+$('#q').addEventListener('input', () => {
+  clearTimeout(searchT);
+  searchT = setTimeout(applyFilter, 280);
+});
+$('#fs').addEventListener('change', applyFilter);
+$('#ff').addEventListener('change', applyFilter);
+$('#pp').addEventListener('change', () => { page = 0; render(); });
+$('#cw').addEventListener('input', applyLayout);
+$('#ih').addEventListener('input', applyLayout);
+$('#bp').addEventListener('click', () => { page--; render(); window.scrollTo(0,0); });
+$('#bn').addEventListener('click', () => { page++; render(); window.scrollTo(0,0); });
+$('#btnNext').addEventListener('click', jumpNext);
+$('#btnExport').addEventListener('click', () => { window.location.href = '/api/export'; });
+
+/* ── volume viewer ── */
+let vol = null, volShape = [0,0,0], volFid = '';
+let slicePos = [0, 0, 0]; // [z(axial), x(sagittal), y(coronal)]
+let activeView = 'axial'; // 'axial' | 'sagittal' | 'coronal'
+
+function openViewer(fid) {
+  volFid = fid;
+  $('#viewer').classList.add('open');
+  $('#vwTitle').textContent = fid;
+  $('#vwLoad').style.display = 'block';
+  $('#vwMain').style.display = 'none';
+  const f = files.find(x => x.id === fid);
+  const qc = f ? f.qc : '';
+  $('#vwQc').innerHTML =
+    `<button class="qb p ${qc==='pass'?'on':''}" onclick="setQC('${esc(fid)}','pass',this)">✓ 通过</button>` +
+    `<button class="qb r ${qc==='review'?'on':''}" onclick="setQC('${esc(fid)}','review',this)">⚑ 复核</button>` +
+    `<button class="qb x ${qc==='exclude'?'on':''}" onclick="setQC('${esc(fid)}','exclude',this)">✗ 排除</button>` +
+    `<button class="qb c" onclick="setQC('${esc(fid)}','',this)">↺</button>`;
+  fetch('/volume/' + encodeURIComponent(fid).replace(/%2F/g, '/'))
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+    .then(buf => {
+      const dv = new DataView(buf);
+      volShape = [dv.getInt32(0, true), dv.getInt32(4, true), dv.getInt32(8, true)];
+      vol = new Uint8Array(buf, 12);
+      slicePos = [Math.floor(volShape[2]/2), Math.floor(volShape[0]/2), Math.floor(volShape[1]/2)];
+      activeView = 'axial';
+      $('#vwLoad').style.display = 'none';
+      $('#vwMain').style.display = 'block';
+      updateSliderRange();
+      renderViewer();
+    })
+    .catch(e => { $('#vwLoad').textContent = '加载失败: ' + e.message; });
+}
+
+function closeViewer() { $('#viewer').classList.remove('open'); vol = null; }
+
+function vIdx(x, y, z) { return x * volShape[1] * volShape[2] + y * volShape[2] + z; }
+
+function getSlice(view) {
+  const [sx, sy, sz] = volShape;
+  if (view === 'axial') {
+    // W=sx, H=sy. pixel[col,row] = vol[sx-1-col, sy-1-row, z]
+    const z = slicePos[0], W = sx, H = sy;
+    const d = new Uint8Array(W * H);
+    for (let row = 0; row < H; row++)
+      for (let col = 0; col < W; col++)
+        d[row * W + col] = vol[vIdx(sx-1-col, sy-1-row, z)];
+    return {data: d, w: W, h: H};
+  } else if (view === 'sagittal') {
+    // W=sy, H=sz. pixel[col,row] = vol[x, sy-1-col, sz-1-row]
+    const x = slicePos[1], W = sy, H = sz;
+    const d = new Uint8Array(W * H);
+    for (let row = 0; row < H; row++)
+      for (let col = 0; col < W; col++)
+        d[row * W + col] = vol[vIdx(x, sy-1-col, sz-1-row)];
+    return {data: d, w: W, h: H};
+  } else {
+    // W=sx, H=sz. pixel[col,row] = vol[sx-1-col, y, sz-1-row]
+    const y = slicePos[2], W = sx, H = sz;
+    const d = new Uint8Array(W * H);
+    for (let row = 0; row < H; row++)
+      for (let col = 0; col < W; col++)
+        d[row * W + col] = vol[vIdx(sx-1-col, y, sz-1-row)];
+    return {data: d, w: W, h: H};
+  }
+}
+
+function paintCanvas(canvas, slice, maxW, maxH) {
+  const {data, w, h} = slice;
+  // Render at native resolution on an offscreen canvas
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const octx = off.getContext('2d');
+  const img = octx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    const v = data[i];
+    img.data[i*4] = v; img.data[i*4+1] = v; img.data[i*4+2] = v; img.data[i*4+3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  // Scale up smoothly to fit within maxW x maxH (keeps aspect ratio)
+  const scale = Math.min(maxW / w, maxH / h);
+  const dw = Math.max(1, Math.round(w * scale)), dh = Math.max(1, Math.round(h * scale));
+  canvas.width = dw; canvas.height = dh;
+  canvas.style.width = dw + 'px'; canvas.style.height = dh + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(off, 0, 0, dw, dh);
+  return ctx;
+}
+
+function mainBox() {
+  // Available box for the main view: most of the viewport, leaving room for controls
+  const w = window.innerWidth * 0.94;
+  const h = window.innerHeight * 0.66;
+  return [w, h];
+}
+
+function renderViewer() {
+  if (!vol) return;
+  // Main view (large, high-res)
+  const mainSlice = getSlice(activeView);
+  const [mw, mh] = mainBox();
+  paintCanvas($('#cMain'), mainSlice, mw, mh);
+  // Thumbnails
+  const views = ['axial', 'sagittal', 'coronal'];
+  const ids = ['#tAx', '#tSg', '#tCo'];
+  views.forEach((v, i) => {
+    const s = getSlice(v);
+    paintCanvas($(ids[i]), s, 90, 90);
+    $(ids[i]).style.borderColor = v === activeView ? 'var(--accent)' : 'var(--border)';
+  });
+  // Slider label
+  const labels = {axial: `Axial z=${slicePos[0]}/${volShape[2]-1}`, sagittal: `Sagittal x=${slicePos[1]}/${volShape[0]-1}`, coronal: `Coronal y=${slicePos[2]}/${volShape[1]-1}`};
+  $('#vMain').textContent = labels[activeView];
+}
+
+function updateSliderRange() {
+  const maxes = {axial: volShape[2]-1, sagittal: volShape[0]-1, coronal: volShape[1]-1};
+  $('#sMain').max = maxes[activeView];
+  $('#sMain').value = slicePos[activeView === 'axial' ? 0 : activeView === 'sagittal' ? 1 : 2];
+}
+
+// Slider
+$('#sMain').addEventListener('input', () => {
+  const idx = activeView === 'axial' ? 0 : activeView === 'sagittal' ? 1 : 2;
+  slicePos[idx] = +$('#sMain').value;
+  renderViewer();
+});
+
+// Thumbnail click to switch view
+$('#tAx').addEventListener('click', () => { activeView = 'axial'; updateSliderRange(); renderViewer(); });
+$('#tSg').addEventListener('click', () => { activeView = 'sagittal'; updateSliderRange(); renderViewer(); });
+$('#tCo').addEventListener('click', () => { activeView = 'coronal'; updateSliderRange(); renderViewer(); });
+
+// Re-render on window resize (mobile rotation, etc.)
+let _rszT = null;
+window.addEventListener('resize', () => {
+  if (!vol || !$('#viewer').classList.contains('open')) return;
+  clearTimeout(_rszT);
+  _rszT = setTimeout(renderViewer, 150);
+});
+
+// Click on main canvas to move crosshair
+$('#cMain').addEventListener('click', e => {
+  if (!vol) return;
+  const r = e.target.getBoundingClientRect();
+  const [sx, sy, sz] = volShape;
+  if (activeView === 'axial') {
+    const col = Math.floor((e.clientX - r.left) / r.width * sx);
+    const row = Math.floor((e.clientY - r.top) / r.height * sy);
+    slicePos[1] = sx-1-col; // x
+    slicePos[2] = sy-1-row; // y
+  } else if (activeView === 'sagittal') {
+    const col = Math.floor((e.clientX - r.left) / r.width * sy);
+    const row = Math.floor((e.clientY - r.top) / r.height * sz);
+    slicePos[2] = sy-1-col; // y
+    slicePos[0] = sz-1-row; // z
+  } else {
+    const col = Math.floor((e.clientX - r.left) / r.width * sx);
+    const row = Math.floor((e.clientY - r.top) / r.height * sz);
+    slicePos[1] = sx-1-col; // x
+    slicePos[0] = sz-1-row; // z
+  }
+  updateSliderRange();
+  renderViewer();
+});
+
+/* ── init ── */
+$('#cw').value = layout.cw;
+$('#ih').value = layout.ih;
+applyLayout();
+loadFiles();
+loadStats();
+// Refresh thumbnail status periodically (background generation progress)
+refreshT = setInterval(() => { loadStats(); loadFiles(); }, 5000);
+// Stop auto-refresh after 10 min (thumbnails should be done by then)
+setTimeout(() => clearInterval(refreshT), 600000);
+</script>
+</body>
+</html>
