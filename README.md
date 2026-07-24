@@ -4,9 +4,9 @@
 
 ## 🎬 演示
 
-https://github.com/mathhyphen/mri-qc/assets/demo/video/renders/demo.mp4
+[▶ 点击观看演示视频](https://github.com/mathhyphen/mri-qc/blob/main/demo/video/renders/demo.mp4)
 
-> 完整演示视频：`demo/video/renders/demo.mp4`（48 秒，展示启动 → 网格审阅 → 交互式看片 → QC 标记 → 导出全流程）。视频源码见 `demo/video/`（HyperFrames 制作，可重新渲染）。
+> 完整演示视频：[`demo/video/renders/demo.mp4`](demo/video/renders/demo.mp4)（48 秒，展示启动 → 网格审阅 → 交互式看片 → QC 标记 → 导出全流程）。视频源码见 [`demo/video/`](demo/video/)（HyperFrames 制作，可重新渲染）。
 
 ## ✨ 核心功能
 
